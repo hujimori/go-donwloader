@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 )
 
 // 機能
@@ -34,13 +35,11 @@ func main() {
 
 	}
 
-	fmt.Println(totalLength)
-	fmt.Println()
-
 	size := 10000
 	offset := 0
 	latest := 0
 	n := int(totalLength) / size
+	var wg sync.WaitGroup
 	for i := 0; i <= n; i++ {
 		offset = size * i
 		if (offset + size) > int(totalLength) {
@@ -48,9 +47,13 @@ func main() {
 		} else {
 			latest = offset + size - 1
 		}
-		fmt.Println(offset, "-", latest)
-		DonwnloadFile("temp"+strconv.Itoa(i), url, offset, latest)
+
+		wg.Add(1)
+		go MultidDownliadFile(&wg, "temp"+strconv.Itoa(i), url, offset, latest)
 	}
+	wg.Wait()
+
+	fmt.Println("Dondload Done.")
 
 	files := make([]io.Reader, n+1)
 	for i := 0; i <= n; i++ {
@@ -70,6 +73,11 @@ func main() {
 	}
 	defer out.Close()
 	_, err = io.Copy(out, reader)
+}
+
+func MultidDownliadFile(wg *sync.WaitGroup, filepath string, url string, offset int, latest int) {
+	defer wg.Done()
+	DonwnloadFile(filepath, url, offset, latest)
 }
 
 func DonwnloadFile(filepath string, url string, offset int, latest int) error {
